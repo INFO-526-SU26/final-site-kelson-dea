@@ -2,30 +2,30 @@
   {
     "objectID": "proposal.html",
     "href": "proposal.html",
-    "title": "Proposal title",
+    "title": "Endangered Languages of the World",
     "section": "",
     "text": "library(tidyverse)"
   },
   {
     "objectID": "proposal.html#dataset",
     "href": "proposal.html#dataset",
-    "title": "Proposal title",
+    "title": "Endangered Languages of the World",
     "section": "Dataset",
-    "text": "Dataset\nA brief description of your dataset including its provenance, dimensions, etc. as well as the reason why you chose this dataset.\nMake sure to load the data and use inline code for some of this information."
+    "text": "Dataset\n\nendangered_status &lt;- read_csv(\"data/endangered_status.csv\")\nfamilies &lt;- read_csv(\"data/families.csv\")\nlanguages &lt;- read_csv(\"data/languages.csv\")\n\n# TidyTuesday readme page:\n# https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-12-23/readme.md\n\nTidyTuesday’s “The Languages of the World” dataset comes from Glottolog 5.2.1’s collaborative catalog of linguistic data. A quick glimpse at our 3 csv’s:\nEndangered status\n\nglimpse(endangered_status)\n\nRows: 8,567\nColumns: 3\n$ id           &lt;chr&gt; \"fasu1242\", \"wash1253\", \"taua1242\", \"puel1244\", \"tuxa1239…\n$ status_code  &lt;dbl&gt; 3, 4, 1, 6, 6, 6, 3, 5, 3, 6, 6, 4, 3, 3, 6, 1, 3, 6, 2, …\n$ status_label &lt;chr&gt; \"shifting\", \"moribund\", \"not endangered\", \"extinct\", \"ext…\n\nunique(endangered_status$status_code)\n\n[1] 3 4 1 6 5 2\n\n\nFamilies\n\nglimpse(families)\n\nRows: 4,832\nColumns: 2\n$ id     &lt;chr&gt; \"abkh1242\", \"surm1244\", \"tama1329\", \"yare1250\", \"monu1249\", \"te…\n$ family &lt;chr&gt; \"Abkhaz-Adyge\", \"Surmic\", \"Tamaic\", \"Yareban\", \"Bogia\", \"Tebera…\n\n\nLanguages\n\nglimpse(languages)\n\nRows: 8,612\nColumns: 9\n$ id           &lt;chr&gt; \"fasu1242\", \"wash1253\", \"taua1242\", \"puel1244\", \"tuxa1239…\n$ name         &lt;chr&gt; \"Fasu\", \"Washo\", \"Tauade\", \"Puelche\", \"Tuxá\", \"Betoi-Jira…\n$ macroarea    &lt;chr&gt; \"Papunesia\", NA, NA, NA, NA, \"South America\", NA, \"South …\n$ latitude     &lt;dbl&gt; -6.626870, 38.818400, -8.348600, -42.223000, -8.953642, 7…\n$ longitude    &lt;dbl&gt; 143.28400, -119.64000, 147.09400, -68.66600, -38.27423, -…\n$ iso639p3code &lt;chr&gt; \"faa\", \"was\", \"ttd\", \"pue\", \"tud\", NA, \"mrf\", \"ano\", \"pby…\n$ countries    &lt;chr&gt; \"PG\", \"US\", \"PG\", \"AR\", \"BR\", \"VE\", \"ID\", \"CO\", \"ID;PG\", …\n$ is_isolate   &lt;lgl&gt; TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRU…\n$ family_id    &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…\n\n\nFrom our glimpses we can see that “endangered_status.csv” contains the necessary lookup values for how threatened a given language is, “families.csv” contains the language family grouping labels, and “languages.csv” contains the bulk of data covering language name, geographic extent, whether it is an isolate, etc.\nI’ve always found linguistics fascinating and it’s a reoccurring topic I chose to study in my free time. Not only are languages themselves interesting, but linguistic analysis enables us to discern an unbelievable range of subtle details about the history and culture of those who spoke and/or wrote it. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history, and so understanding them may help prevent their decline or at least preserve some knowledge before they’re lost."
   },
   {
     "objectID": "proposal.html#questions",
     "href": "proposal.html#questions",
-    "title": "Proposal title",
+    "title": "Endangered Languages of the World",
     "section": "Questions",
-    "text": "Questions\nThe two questions you want to answer."
+    "text": "Questions\nQuestion 1: How does geography correlate with endangered language status?\nQuestion 2: What patterns exist in language family/isolate status for endangered languages?"
   },
   {
     "objectID": "proposal.html#analysis-plan",
     "href": "proposal.html#analysis-plan",
-    "title": "Proposal title",
+    "title": "Endangered Languages of the World",
     "section": "Analysis plan",
-    "text": "Analysis plan\n\nA plan for answering each of the questions including the variables involved, variables to be created (if any), external data to be merged in (if any)."
+    "text": "Analysis plan\nQuestion 1:\n\nVariables: macroarea, latitude, longitude, language name, endangered status.\nCreated variables: Potentially a binary between “endangered” and “not endangered” to visualize those languages in some significant level of danger from those that aren’t in significant danger (or are extinct already).\nUsage of a world map for the plot is a natural fit here, perhaps using a heat map of endangered language prevalence to examine their distribution.\n\nQuestion 2:\n\nVariables: language name, family, endangered status, isolate status.\nCreated variables: Some aspect of the family (such as the number of members or even something representing total geographic extent).\nAnalysis here will likely involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered.\n\n\n\n\nTask\nStatus\nDue\nSummary\n\n\n\n\nExplore possible visualizations\n\n6/14/2026\n\n\n\nCreate chosen analysis and visuals\n\n6/21/2026\n\n\n\nFurther refinement and presentation\n\n6/28/2026"
   },
   {
     "objectID": "index.html",
@@ -53,7 +53,7 @@
     "href": "presentation.html#layouts",
     "title": "Project title",
     "section": "Layouts",
-    "text": "Layouts\nYou can use plain text\n\n\n\nor bullet points1\n\n\nor in two columns\n\n\n\nlike\nthis\n\nAnd add footnotes"
+    "text": "Layouts\nYou can use plain text\n\n\n\nor bullet points1\n\n\nor in two columns\n\n\nlike\nthis\n\nAnd add footnotes"
   },
   {
     "objectID": "presentation.html#code",
@@ -109,6 +109,20 @@
     "href": "about.html",
     "title": "About",
     "section": "",
-    "text": "This project was developed by [Team Name] For INFO 526 - Data Analysis and Visualization at the University of Arizona, taught by Dr. Greg Chism. The team is comprised of the following team members.\n\nTeam member 1: One sentence description of Team member 1 (e.g., year, major, etc.).\nTeam member 2: One sentence description of Team member 2 (e.g., year, major, etc.).\nTeam member 3: One sentence description of Team member 3 (e.g., year, major, etc.).\nTeam member 4: One sentence description of Team member 4 (e.g., year, major, etc.)."
+    "text": "This project was developed by Damon Kelson For INFO 526 - Data Analysis and Visualization at the University of Arizona, taught by Dr. Greg Chism. The team is comprised of the following team members.\n\nTeam member 1: One sentence description of Team member 1 (e.g., year, major, etc.).\nTeam member 2: One sentence description of Team member 2 (e.g., year, major, etc.).\nTeam member 3: One sentence description of Team member 3 (e.g., year, major, etc.).\nTeam member 4: One sentence description of Team member 4 (e.g., year, major, etc.)."
+  },
+  {
+    "objectID": "presentation.html",
+    "href": "presentation.html",
+    "title": "Project title",
+    "section": "",
+    "text": "The presentation is created using the Quarto CLI\n## sets the start of a new slide\n\n\n\n\nYou can use plain text\n\n\n\nor bullet points1\n\n\nor in two columns\n\n\n\nlike\nthis\n\n\n\n\n\n\n# A tibble: 2 × 5\n  term        estimate std.error statistic       p.value\n  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;\n1 (Intercept)   25.3      3.08        8.22 0.00000000358\n2 speed         -0.116    0.0642     -1.81 0.0806       \n\n\n# A tibble: 1 × 12\n  r.squared adj.r.squared sigma statistic p.value    df logLik   AIC   BIC\n      &lt;dbl&gt;         &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1    0.0983        0.0682  5.82      3.27  0.0806     1  -101.  207.  212.\n# ℹ 3 more variables: deviance &lt;dbl&gt;, df.residual &lt;int&gt;, nobs &lt;int&gt;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSome text\ngoes here"
+  },
+  {
+    "objectID": "presentation.html#footnotes",
+    "href": "presentation.html#footnotes",
+    "title": "Project title",
+    "section": "Footnotes",
+    "text": "Footnotes\n\n\nAnd add footnotes↩︎"
   }
 ]

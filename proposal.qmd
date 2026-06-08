@@ -1,11 +1,11 @@
 ---
-title: "Proposal title"
-subtitle: "Proposal"
+title: "Endangered Languages of the World"
+subtitle: "Patterns in threatened languages"
 author: 
-  - name: "Team Name"
+  - name: "Damon Kelson"
     affiliations:
       - name: "School of Information, University of Arizona"
-description: "Project description"
+description: "An exploration of the features of endangered languages"
 format:
   html:
     code-tools: true
@@ -29,16 +29,62 @@ library(tidyverse)
 ```{r}
 #| label: load-dataset
 #| message: false
+
+endangered_status <- read_csv("data/endangered_status.csv")
+families <- read_csv("data/families.csv")
+languages <- read_csv("data/languages.csv")
+
+# TidyTuesday readme page:
+# https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-12-23/readme.md
 ```
 
-A brief description of your dataset including its provenance, dimensions, etc. as well as the reason why you chose this dataset.
+TidyTuesday's "The Languages of the World" dataset comes from Glottolog 5.2.1's collaborative catalog of linguistic data. A quick glimpse at our 3 csv's:
 
-Make sure to load the data and use inline code for some of this information.
+**Endangered status**
+
+```{r}
+glimpse(endangered_status)
+unique(endangered_status$status_code)
+```
+
+**Families**
+
+```{r}
+glimpse(families)
+```
+
+**Languages**
+
+```{r}
+glimpse(languages)
+```
+
+From our glimpses we can see that "endangered_status.csv" contains the necessary lookup values for how threatened a given language is, "families.csv" contains the language family grouping labels, and "languages.csv" contains the bulk of data covering language name, geographic extent, whether it is an isolate, etc.
+
+I've always found linguistics fascinating and it's a reoccurring topic I chose to study in my free time. Not only are languages themselves interesting, but linguistic analysis enables us to discern an unbelievable range of subtle details about the history and culture of those who spoke and/or wrote it. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history, and so understanding them may help prevent their decline or at least preserve some knowledge before they're lost.
 
 ## Questions
 
-The two questions you want to answer.
+Question 1: How does geography correlate with endangered language status?
+
+Question 2: What patterns exist in language family/isolate status for endangered languages?
 
 ## Analysis plan
 
--   A plan for answering each of the questions including the variables involved, variables to be created (if any), external data to be merged in (if any).
+**Question 1:**
+
+- Variables: macroarea, latitude, longitude, language name, endangered status.
+- Created variables: Potentially a binary between "endangered" and "not endangered" to visualize those languages in some significant level of danger from those that aren't in significant danger (or are extinct already).
+- Usage of a world map for the plot is a natural fit here, perhaps using a heat map of endangered language prevalence to examine their distribution.
+
+**Question 2:**
+
+- Variables: language name, family, endangered status, isolate status.
+- Created variables: Some aspect of the family (such as the number of members or even something representing total geographic extent).
+- Analysis here will likely involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered.
+
+| Task                                | Status | Due       | Summary |
+|-------------------------------------|--------|-----------|---------|
+| Explore possible visualizations     |        | 6/14/2026 |         |
+| Create chosen analysis and visuals  |        | 6/21/2026 |         |
+| Further refinement and presentation |        | 6/28/2026 |         |
