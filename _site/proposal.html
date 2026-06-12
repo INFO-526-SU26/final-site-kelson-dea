@@ -4374,16 +4374,22 @@ $ family_id    &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N
 <p><strong>Question 1:</strong></p>
 <ul>
 <li>Variables: macroarea, latitude, longitude, language name, endangered status.</li>
-<li>Created variables: Potentially a binary between “endangered” and “not endangered” to visualize those languages in some significant level of danger from those that aren’t in significant danger (or are extinct already).</li>
-<li>Usage of a world map for the plot is a natural fit here, perhaps using a heat map of endangered language prevalence to examine their distribution.</li>
+<li>Created variables: Most likely creating a binary variable between “endangered” and “not endangered” to visualize languages which are in a significant level of danger from those that aren’t in significant danger (or are extinct already).</li>
+<li>Usage of a world map for the plot is a natural fit here, most likely a heat map of endangered language prevalence to examine their global geographic distribution.</li>
 </ul>
 <p><strong>Question 2:</strong></p>
 <ul>
 <li>Variables: language name, family, endangered status, isolate status.</li>
-<li>Created variables: Some aspect of the family (such as the number of members or even something representing total geographic extent).</li>
-<li>Analysis here will likely involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered.</li>
+<li>Created variables: A numeric aspect of the language family, such as the number of living and/or extinct members. Potentially a quantity representing total geographic extent of the language family if it can fit seamlessly.</li>
+<li>Analysis here will involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered than those in more numerous families.</li>
 </ul>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 60%">
+<col style="width: 11%">
+<col style="width: 15%">
+<col style="width: 12%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Task</th>
@@ -4394,19 +4400,19 @@ $ family_id    &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N
 </thead>
 <tbody>
 <tr class="odd">
-<td>Explore possible visualizations</td>
+<td>Explore possible visualization candidates</td>
 <td></td>
 <td>6/14/2026</td>
 <td></td>
 </tr>
 <tr class="even">
-<td>Create chosen analysis and visuals</td>
+<td>Work on chosen analysis and visuals</td>
 <td></td>
 <td>6/21/2026</td>
 <td></td>
 </tr>
 <tr class="odd">
-<td>Further refinement and presentation</td>
+<td>Final refinement and presentation</td>
 <td></td>
 <td>6/28/2026</td>
 <td></td>
@@ -4999,20 +5005,20 @@ $ family_id    &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N
 <span id="cb11-84"><a href="#cb11-84"></a>**Question 1:**</span>
 <span id="cb11-85"><a href="#cb11-85"></a></span>
 <span id="cb11-86"><a href="#cb11-86"></a><span class="ss">- </span>Variables: macroarea, latitude, longitude, language name, endangered status.</span>
-<span id="cb11-87"><a href="#cb11-87"></a><span class="ss">- </span>Created variables: Potentially a binary between &quot;endangered&quot; and &quot;not endangered&quot; to visualize those languages in some significant level of danger from those that aren&#39;t in significant danger (or are extinct already).</span>
-<span id="cb11-88"><a href="#cb11-88"></a><span class="ss">- </span>Usage of a world map for the plot is a natural fit here, perhaps using a heat map of endangered language prevalence to examine their distribution.</span>
+<span id="cb11-87"><a href="#cb11-87"></a><span class="ss">- </span>Created variables: Most likely creating a binary variable between &quot;endangered&quot; and &quot;not endangered&quot; to visualize languages which are in a significant level of danger from those that aren&#39;t in significant danger (or are extinct already).</span>
+<span id="cb11-88"><a href="#cb11-88"></a><span class="ss">- </span>Usage of a world map for the plot is a natural fit here, most likely a heat map of endangered language prevalence to examine their global geographic distribution.</span>
 <span id="cb11-89"><a href="#cb11-89"></a></span>
 <span id="cb11-90"><a href="#cb11-90"></a>**Question 2:**</span>
 <span id="cb11-91"><a href="#cb11-91"></a></span>
 <span id="cb11-92"><a href="#cb11-92"></a><span class="ss">- </span>Variables: language name, family, endangered status, isolate status.</span>
-<span id="cb11-93"><a href="#cb11-93"></a><span class="ss">- </span>Created variables: Some aspect of the family (such as the number of members or even something representing total geographic extent).</span>
-<span id="cb11-94"><a href="#cb11-94"></a><span class="ss">- </span>Analysis here will likely involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered.</span>
+<span id="cb11-93"><a href="#cb11-93"></a><span class="ss">- </span>Created variables: A numeric aspect of the language family, such as the number of living and/or extinct members. Potentially a quantity representing total geographic extent of the language family if it can fit seamlessly.</span>
+<span id="cb11-94"><a href="#cb11-94"></a><span class="ss">- </span>Analysis here will involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered than those in more numerous families.</span>
 <span id="cb11-95"><a href="#cb11-95"></a></span>
-<span id="cb11-96"><a href="#cb11-96"></a><span class="pp">|</span> Task                                <span class="pp">|</span> Status <span class="pp">|</span> Due       <span class="pp">|</span> Summary <span class="pp">|</span></span>
-<span id="cb11-97"><a href="#cb11-97"></a><span class="pp">|-------------------------------------|--------|-----------|---------|</span></span>
-<span id="cb11-98"><a href="#cb11-98"></a><span class="pp">|</span> Explore possible visualizations     <span class="pp">|</span>        <span class="pp">|</span> 6/14/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
-<span id="cb11-99"><a href="#cb11-99"></a><span class="pp">|</span> Create chosen analysis and visuals  <span class="pp">|</span>        <span class="pp">|</span> 6/21/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
-<span id="cb11-100"><a href="#cb11-100"></a><span class="pp">|</span> Further refinement and presentation <span class="pp">|</span>        <span class="pp">|</span> 6/28/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
+<span id="cb11-96"><a href="#cb11-96"></a><span class="pp">|</span> Task                                      <span class="pp">|</span> Status <span class="pp">|</span> Due       <span class="pp">|</span> Summary <span class="pp">|</span></span>
+<span id="cb11-97"><a href="#cb11-97"></a><span class="pp">|-------------------------------------------|--------|-----------|---------|</span></span>
+<span id="cb11-98"><a href="#cb11-98"></a><span class="pp">|</span> Explore possible visualization candidates <span class="pp">|</span>        <span class="pp">|</span> 6/14/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
+<span id="cb11-99"><a href="#cb11-99"></a><span class="pp">|</span> Work on chosen analysis and visuals       <span class="pp">|</span>        <span class="pp">|</span> 6/21/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
+<span id="cb11-100"><a href="#cb11-100"></a><span class="pp">|</span> Final refinement and presentation         <span class="pp">|</span>        <span class="pp">|</span> 6/28/2026 <span class="pp">|</span>         <span class="pp">|</span></span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

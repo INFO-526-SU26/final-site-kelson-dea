@@ -74,17 +74,17 @@ Question 2: What patterns exist in language family/isolate status for endangered
 **Question 1:**
 
 - Variables: macroarea, latitude, longitude, language name, endangered status.
-- Created variables: Potentially a binary between "endangered" and "not endangered" to visualize those languages in some significant level of danger from those that aren't in significant danger (or are extinct already).
-- Usage of a world map for the plot is a natural fit here, perhaps using a heat map of endangered language prevalence to examine their distribution.
+- Created variables: Most likely creating a binary variable between "endangered" and "not endangered" to visualize languages which are in a significant level of danger from those that aren't in significant danger (or are extinct already).
+- Usage of a world map for the plot is a natural fit here, most likely a heat map of endangered language prevalence to examine their global geographic distribution.
 
 **Question 2:**
 
 - Variables: language name, family, endangered status, isolate status.
-- Created variables: Some aspect of the family (such as the number of members or even something representing total geographic extent).
-- Analysis here will likely involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered.
+- Created variables: A numeric aspect of the language family, such as the number of living and/or extinct members. Potentially a quantity representing total geographic extent of the language family if it can fit seamlessly.
+- Analysis here will involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered than those in more numerous families.
 
-| Task                                | Status | Due       | Summary |
-|-------------------------------------|--------|-----------|---------|
-| Explore possible visualizations     |        | 6/14/2026 |         |
-| Create chosen analysis and visuals  |        | 6/21/2026 |         |
-| Further refinement and presentation |        | 6/28/2026 |         |
+| Task                                      | Status | Due       | Summary |
+|-------------------------------------------|--------|-----------|---------|
+| Explore possible visualization candidates |        | 6/14/2026 |         |
+| Work on chosen analysis and visuals       |        | 6/21/2026 |         |
+| Final refinement and presentation         |        | 6/28/2026 |         |
