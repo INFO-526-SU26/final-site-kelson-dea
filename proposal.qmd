@@ -74,8 +74,8 @@ Question 2: What patterns exist in language family/isolate status for endangered
 **Question 1:**
 
 - Variables: macroarea, latitude, longitude, language name, endangered status.
-- Created variables: Most likely creating a binary variable between "endangered" and "not endangered" to visualize languages which are in a significant level of danger from those that aren't in significant danger (or are extinct already).
-- Usage of a world map for the plot is a natural fit here, most likely a heat map of endangered language prevalence to examine their global geographic distribution.
+- Created variables: Creating a binary variable that designates a language as "at risk" or not to visualize languages which are in a significant level of danger from those that aren't in significant danger (or are extinct already). Initially levels 1 & 6 will be considered not "at risk", levels 2 & 3 will require a small amount of additional research to make the final determination as to whether either or both will be considered "at risk".
+- Usage of a world map for the plot is a natural fit here, most likely a heat map of endangered language prevalence to examine their global geographic distribution. Will require extensive bin adjustment.
 
 **Question 2:**
 
@@ -83,8 +83,13 @@ Question 2: What patterns exist in language family/isolate status for endangered
 - Created variables: A numeric aspect of the language family, such as the number of living and/or extinct members. Potentially a quantity representing total geographic extent of the language family if it can fit seamlessly.
 - Analysis here will involve exploring whether or not language isolates are more likely to be endangered and whether languages in small families are more likely to be endangered than those in more numerous families.
 
-| Task                                      | Status | Due       | Summary |
-|-------------------------------------------|--------|-----------|---------|
-| Explore possible visualization candidates |        | 6/14/2026 |         |
-| Work on chosen analysis and visuals       |        | 6/21/2026 |         |
-| Final refinement and presentation         |        | 6/28/2026 |         |
++----------------------------------------------+----------+-----------+----------+
+| Task                                         | Status   | Due       | Summary  |
++==============================================+==========+===========+==========+
+| Explore possible visualization candidates\   |          | 6/20/2026 |          |
+| & final "at risk" levels determination       |          |           |          |
++----------------------------------------------+----------+-----------+----------+
+| Complete work on chosen analysis and visuals |          | 6/25/2026 |          |
++----------------------------------------------+----------+-----------+----------+
+| Final refinement and presentation            |          | 6/30/2026 |          |
++----------------------------------------------+----------+-----------+----------+
