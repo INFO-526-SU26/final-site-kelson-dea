@@ -1,11 +1,11 @@
 ---
-title: "Project Title"
-subtitle: "INFO 526 - Summer 2024 - Final Project"
+title: "Endangered Languages of the World"
+subtitle: "INFO 526 - Summer 2026 - Final Project"
 author: 
-  - name: "Team name"
+  - name: "Damon Kelson"
     affiliations:
       - name: "School of Information, University of Arizona"
-description: "Project description"
+description: "An exploration of the features of endangered languages"
 format:
    html:
     code-tools: true
@@ -19,4 +19,4 @@ execute:
 
 ## Abstract
 
-Add project abstract here.
+Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what is endangered.
