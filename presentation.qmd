@@ -21,8 +21,8 @@ execute:
 #| include: false
 
 # Load packages here
-pacman::p_load(tidymodels,
-               tidyverse, kableExtra)
+pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
+               patchwork, cowplot, rnaturalearth, rnaturalearthdata, hexbin)
 
 ```
 
@@ -31,26 +31,152 @@ pacman::p_load(tidymodels,
 #| include: false
 
 # Plot theme
-ggplot2::theme_set(ggplot2::theme_minimal(base_size = 11))
+#ggplot2::theme_set(ggplot2::theme_minimal(base_size = 11))
 
 # For better figure resolution
-knitr::opts_chunk$set(
-  fig.retina = 3, 
-  dpi = 300, 
-  fig.width = 6, 
-  fig.asp = 0.618 
+#knitr::opts_chunk$set(
+#  fig.retina = 3, 
+#  dpi = 300, 
+#  fig.width = 6, 
+#  fig.asp = 0.618 
+#  )
+```
+
+# Presentation planning
+
+```{r Initial csv assignment and prep}
+languages <- read_csv("data/languages.csv", show_col_types = FALSE)
+status    <- read_csv("data/endangered_status.csv", show_col_types = FALSE)
+families  <- read_csv("data/families.csv", show_col_types = FALSE)
+
+status_order <- status |>
+  distinct(status_code, status_label) |>
+  arrange(status_code) |>
+  pull(status_label)
+```
+
+```{r Data prep}
+unclear_groups <- c("Bookkeeping", "Unclassifiable", "Pidgin",
+                     "Speech Register", "Sign Language", "Unattested",
+                     "Artificial Language", "Mixed Language")
+# ~10% of the data set!
+
+family_size <- languages |>
+  filter(!is.na(family_id)) |>
+  count(family_id, name = "family_size")
+```
+
+
+```{r Base data}
+lang_base <- languages |>
+  left_join(status, by = "id") |>
+  left_join(families, by = c("family_id" = "id")) |>
+  left_join(family_size, by = "family_id") |>
+  mutate(
+    status_label = factor(status_label, levels = status_order, ordered = TRUE),
+    # 3-category split: 1 | 2,3,4,5 | 6... NA kept around (~5%)
+    risk_group = case_when(
+      status_code == 1     ~ "not endangered",
+      status_code %in% 2:5 ~ "at risk",
+      status_code == 6     ~ "extinct"
+    ),
+    risk_group = factor(risk_group, levels = c("not endangered", "at risk", "extinct")),
+    is_unclear_group = family %in% unclear_groups,
+    family_bucket = case_when(
+      is_isolate         ~ "isolate",
+      is_unclear_group    ~ "unclear (exclude)",
+      family_size <= 10   ~ "small (2-10)",
+      family_size <= 50   ~ "medium (11-50)",
+      family_size > 50    ~ "large (50+)"
+    ),
+    family_bucket = factor(family_bucket, levels = c(
+      "isolate", "small (2-10)", "medium (11-50)", "large (50+)",
+      "unclear (exclude)"
+    ))
   )
 ```
 
-```{r}
-#| label: load-data
-#| include: false
-# Load data here
-data(mtcars)
-mtcars$speed <- mtcars$hp / mtcars$wt
+```{r Map prep}
+lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
 
-data("penguins")
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+hex_bins <- 30    # constant tweaks
+
+# map with extinction dropped
+map_data_excl_extinct <- lang_geo |>
+  filter(risk_group %in% c("not endangered", "at risk")) |>
+  mutate(at_risk_num = as.numeric(risk_group == "at risk"))
+
+# extinct now included with at risk
+map_data_incl_extinct <- lang_geo |>
+  filter(risk_group %in% c("not endangered", "at risk", "extinct")) |>
+  mutate(at_risk_num = as.numeric(risk_group != "not endangered"))
 ```
+
+```{r plot exploration 1}
+family_severity <- lang_base |>
+  filter(!is.na(risk_group), family_bucket != "unclear (exclude)") |>
+  count(family_bucket, risk_group) |>
+  group_by(family_bucket) |>
+  mutate(pct = n / sum(n))
+
+ggplot(family_severity, aes(family_bucket, pct, fill = risk_group)) +
+  geom_col() +
+  geom_text(aes(label = scales::percent(pct, accuracy = 1)), position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values = c("not endangered" = "forestgreen", "at risk" = "darkorange", "extinct" = "grey50")) +
+  labs(title = "Severity profile by family size", fill = NULL) +
+  theme_minimal()
+```
+
+```{r plot exploration 2}
+isolates_geo <- lang_geo |> filter(is_isolate)
+isolates_urgent <- isolates_geo |> filter(status_code %in% c(4, 5))
+
+ggplot() +
+  geom_sf(data = world, fill = "grey95") +
+  geom_point(data = isolates_geo, aes(longitude, latitude, color = risk_group)) +
+  geom_text_repel(data = isolates_urgent, aes(longitude, latitude, label = name)) +
+  scale_color_manual(values = c("not endangered" = "forestgreen", "at risk" = "darkorange", "extinct" = "grey50")) +
+  coord_sf() +
+  labs(title = "Language isolates worldwide", color = NULL) +
+  theme_minimal()
+```
+
+```{r plot exploration 3}
+diverging_data <- family_severity |>
+  filter(risk_group %in% c("not endangered", "extinct")) |>
+  mutate(
+    pct_signed = if_else(risk_group == "extinct", -pct, pct),
+    label_hjust = if_else(risk_group == "extinct", 1.1, -0.1)
+  )
+
+ggplot(diverging_data, aes(family_bucket, pct_signed, fill = risk_group)) +
+  geom_col() +
+  geom_text(aes(label = scales::percent(abs(pct_signed), accuracy = 1), hjust = label_hjust)) +
+  scale_fill_manual(values = c("not endangered" = "blue", "extinct" = "red")) +
+  coord_flip() +
+  labs(title = "Not-endangered and extinct",
+       x = NULL, y = NULL, fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+```{r plot exploration 4}
+ggplot() +
+  geom_sf(data = world, fill = "grey95") +
+  stat_summary_hex(data = map_data_excl_extinct, aes(longitude, latitude, z = at_risk_num), fun = mean, bins = hex_bins) +
+  scale_fill_gradientn(colours = c("#EFF6FF", "steelblue", "#FDE725", "#E63946")) +
+  coord_sf() +
+  labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
+  theme_minimal()
+```
+
+
+```{r plot exploration 5}
+
+```
+
 
 # Using Quarto for presentations
 
@@ -80,26 +206,6 @@ or in two columns
 
 - this
 
-## Code
-
-```{r, echo=FALSE}
-model <- lm(mpg ~ speed, data = mtcars) 
-
-model |> tidy()
-
-model |> glance()
-
-```
-
-## Plots
-
-```{r}
-penguins |>
-  mutate(species = ifelse(species == "Adelie", "Adelie", "Other")) |>
-  ggplot(aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
-  geom_point()
-```
-
 ## Plot and text
 
 ::::: columns
@@ -111,12 +217,12 @@ penguins |>
 
 ::: {.column width="50%"}
 ```{r, warning=FALSE, fig.width=5.5}
-penguins |>
-  ggplot(aes(x = bill_length_mm, y = species, color = species)) +
-  geom_boxplot(linewidth = 0.75,
-               outlier.size = 2.5) +
-  theme_minimal(base_size = 15) +
-  theme(legend.key.size = unit(0.8, "cm"))
+#penguins |>
+#  ggplot(aes(x = bill_length_mm, y = species, color = species)) +
+#  geom_boxplot(linewidth = 0.75,
+#               outlier.size = 2.5) +
+#  theme_minimal(base_size = 15) +
+#  theme(legend.key.size = unit(0.8, "cm"))
 ```
 :::
 :::::
@@ -128,33 +234,11 @@ penguins |>
 If you want to generate a table, make sure it is in the HTML format (instead of Markdown or other formats), e.g.,
 
 ```{r}
-penguins |> 
-  head() |>
-  kableExtra::kable(format = "html") |>
-  kableExtra::kable_styling()
+#penguins |> 
+#  head() |>
+#  kableExtra::kable(format = "html") |>
+#  kableExtra::kable_styling()
 ```
-
-## Images
-
-![Image credit: Danielle Navarro, Percolate.](images/watercolour_sys02_img34_teacup-ocean.png){fig-align="center" width="500"}
-
-## Math Expressions {.smaller}
-
-You can write LaTeX math expressions inside a pair of dollar signs, e.g. \$\\alpha+\\beta\$ renders $\alpha + \beta$. You can use the display style with double dollar signs:
-
-```         
-$$\bar{X}=\frac{1}{n}\sum_{i=1}^nX_i$$
-```
-
-$$\bar{X}=\frac{1}{n}\sum_{i=1}^nX_i$$
-
-Limitations:
-
-1.  The source code of a LaTeX math expression must be in one line, unless it is inside a pair of double dollar signs, in which case the starting `$$` must appear in the very beginning of a line, followed immediately by a non-space character, and the ending `$$` must be at the end of a line, led by a non-space character;
-
-2.  There should not be spaces after the opening `$` or before the closing `$`.
-
-# Wrap up
 
 ## Feeling adventurous?
 
