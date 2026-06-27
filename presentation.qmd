@@ -66,7 +66,6 @@ family_size <- languages |>
   count(family_id, name = "family_size")
 ```
 
-
 ```{r Base data}
 lang_base <- languages |>
   left_join(status, by = "id") |>
@@ -101,46 +100,18 @@ lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-hex_bins <- 30    # constant tweaks
+hex_bins <- 35    # constant tweaks
 
 # map with extinction dropped
 map_data_excl_extinct <- lang_geo |>
   filter(risk_group %in% c("not endangered", "at risk")) |>
   mutate(at_risk_num = as.numeric(risk_group == "at risk"))
 
-# extinct now included with at risk
-map_data_incl_extinct <- lang_geo |>
-  filter(risk_group %in% c("not endangered", "at risk", "extinct")) |>
-  mutate(at_risk_num = as.numeric(risk_group != "not endangered"))
-```
-
-```{r plot exploration 1}
 family_severity <- lang_base |>
   filter(!is.na(risk_group), family_bucket != "unclear (exclude)") |>
   count(family_bucket, risk_group) |>
   group_by(family_bucket) |>
   mutate(pct = n / sum(n))
-
-ggplot(family_severity, aes(family_bucket, pct, fill = risk_group)) +
-  geom_col() +
-  geom_text(aes(label = scales::percent(pct, accuracy = 1)), position = position_stack(vjust = 0.5)) +
-  scale_fill_manual(values = c("not endangered" = "forestgreen", "at risk" = "darkorange", "extinct" = "grey50")) +
-  labs(title = "Severity profile by family size", fill = NULL) +
-  theme_minimal()
-```
-
-```{r plot exploration 2}
-isolates_geo <- lang_geo |> filter(is_isolate)
-isolates_urgent <- isolates_geo |> filter(status_code %in% c(4, 5))
-
-ggplot() +
-  geom_sf(data = world, fill = "grey95") +
-  geom_point(data = isolates_geo, aes(longitude, latitude, color = risk_group)) +
-  geom_text_repel(data = isolates_urgent, aes(longitude, latitude, label = name)) +
-  scale_color_manual(values = c("not endangered" = "forestgreen", "at risk" = "darkorange", "extinct" = "grey50")) +
-  coord_sf() +
-  labs(title = "Language isolates worldwide", color = NULL) +
-  theme_minimal()
 ```
 
 ```{r plot exploration 3}
@@ -165,17 +136,119 @@ ggplot(diverging_data, aes(family_bucket, pct_signed, fill = risk_group)) +
 ```{r plot exploration 4}
 ggplot() +
   geom_sf(data = world, fill = "grey95") +
-  stat_summary_hex(data = map_data_excl_extinct, aes(longitude, latitude, z = at_risk_num), fun = mean, bins = hex_bins) +
-  scale_fill_gradientn(colours = c("#EFF6FF", "steelblue", "#FDE725", "#E63946")) +
+  stat_summary_hex(data = map_data_excl_extinct, aes(longitude, latitude, z = at_risk_num),
+                   fun = mean, bins = hex_bins, alpha = 0.6) +
+  scale_fill_gradientn(colours = c("#0077B6", "#00B4D8", "#FDE725", "#E63946")) +
   coord_sf() +
   labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
   theme_minimal()
 ```
 
+```{r hex refinement prep}
+# ECK4 equal-area pseudocyrlindrical projection
+eck4 <- "+proj=eck4"
+
+lang_sf    <- st_as_sf(map_data_excl_extinct, coords = c("longitude", "latitude"), crs = 4326) |>
+  st_transform(eck4)
+world_proj <- st_transform(world, eck4)
+```
+
+```{r hex prep}
+grid <- st_make_grid(world_proj, cellsize = 500000, square = FALSE) |>
+  st_as_sf() |>
+  mutate(cell_id = row_number())
+
+cell_summary <- st_join(lang_sf, grid) |>
+  st_drop_geometry() |>
+  group_by(cell_id) |>
+  summarize(pct_at_risk = mean(at_risk_num), n_lang = n(), .groups = "drop")
+
+grid_plot <- grid |>
+  left_join(cell_summary, by = "cell_id") |>
+  filter(!is.na(n_lang)) |>
+  mutate(alpha_val = scales::rescale(sqrt(n_lang), to = c(0.45, 1)))
+```
+
+```{r hex plot}
+ggplot() +
+  geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
+  geom_sf(data = grid_plot, aes(fill = pct_at_risk, alpha = alpha_val), color = NA) +
+  geom_sf(data = world_proj, fill = NA, color = "grey40", linewidth = 0.2) +
+  scale_alpha_identity() +
+  scale_fill_distiller(palette = "OrRd", direction = 1) +
+  coord_sf(crs = eck4) +
+  labs(title = "Share at risk (extinct excluded)", fill = "% at risk")
+```
+
+```{r isolates diverging prep}
+p_bar <- ggplot(diverging_data, aes(family_bucket, pct_signed, fill = risk_group)) +
+  geom_col() +
+  geom_text(aes(label = scales::percent(abs(pct_signed), accuracy = 1), hjust = label_hjust)) +
+  scale_fill_manual(values = c("not endangered" = "blue", "extinct" = "red")) +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+```{r iso prep 2}
+iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
+iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+sa_box <- list(lon = c(-85, -34), lat = c(-20, 13))
+oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
+```
+
+```{r iso regions}
+iso_region <- iso_sf |>
+  mutate(
+    region_focus = case_when(
+      between(latitude, sa_box$lat[1], sa_box$lat[2]) & between(longitude, sa_box$lon[1], sa_box$lon[2]) ~ "Northern South America",
+      between(latitude, oc_box$lat[1], oc_box$lat[2]) & between(longitude, oc_box$lon[1], oc_box$lon[2]) ~ "Australia, New Guinea & Oceania",
+      TRUE ~ "elsewhere"
+    )
+  ) |>
+  st_drop_geometry()
+```
+
+```{r iso plots}
+p_map_base <- ggplot() +
+  geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
+  geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), size = 1.6) +
+  theme_void() +
+  theme(legend.position = "none")
+
+p_sa <- p_map_base + coord_sf(xlim = sa_box$lon, ylim = sa_box$lat, expand = FALSE) +
+  labs(title = "Northern South America")
+p_oc <- p_map_base + coord_sf(xlim = oc_box$lon, ylim = oc_box$lat, expand = FALSE) +
+  labs(title = "Australia, New Guinea & Oceania")
+```
+
+```{r iso callout}
+focus_pct <- mean(iso_region$region_focus != "elsewhere")
+
+p_callout <- ggplot() +
+  annotate("text", x = 0, y = 0.65, label = scales::percent(focus_pct, accuracy = 1),
+           size = 9, fontface = "bold") +
+  annotate("text", x = 0, y = 0.25, size = 3.2,
+           label = "of all isolates worldwide sit in northern South America\nor Australia, New Guinea & Oceania") +
+  xlim(-1, 1) + ylim(0, 1) +
+  theme_void() +
+  theme(plot.margin = margin(2, 2, 2, 2))
+```
+
+```{r iso combine}
+p_callout / (p_bar | (p_sa / p_oc)) + plot_layout(heights = c(0.25, 0.75))
+```
+
+
 
 ```{r plot exploration 5}
-
+#lang_base |> 
+#  dplyr::filter(is_unclear_group == TRUE) |> 
+#  View()
 ```
+
+
 
 
 # Using Quarto for presentations
