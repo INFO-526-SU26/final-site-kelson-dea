@@ -22,7 +22,7 @@ execute:
 
 # Load packages here
 pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
-               patchwork, cowplot, rnaturalearth, rnaturalearthdata, hexbin)
+               patchwork, cowplot, rnaturalearth, rnaturalearthdata)
 
 ```
 
@@ -42,7 +42,7 @@ pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
 #  )
 ```
 
-# Presentation planning
+
 
 ```{r Initial csv assignment and prep}
 languages <- read_csv("data/languages.csv", show_col_types = FALSE)
@@ -100,8 +100,6 @@ lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-hex_bins <- 35    # constant tweaks
-
 # map with extinction dropped
 map_data_excl_extinct <- lang_geo |>
   filter(risk_group %in% c("not endangered", "at risk")) |>
@@ -111,41 +109,14 @@ family_severity <- lang_base |>
   filter(!is.na(risk_group), family_bucket != "unclear (exclude)") |>
   count(family_bucket, risk_group) |>
   group_by(family_bucket) |>
-  mutate(pct = n / sum(n))
-```
-
-```{r plot exploration 3}
-diverging_data <- family_severity |>
-  filter(risk_group %in% c("not endangered", "extinct")) |>
-  mutate(
-    pct_signed = if_else(risk_group == "extinct", -pct, pct),
-    label_hjust = if_else(risk_group == "extinct", 1.1, -0.1)
-  )
-
-ggplot(diverging_data, aes(family_bucket, pct_signed, fill = risk_group)) +
-  geom_col() +
-  geom_text(aes(label = scales::percent(abs(pct_signed), accuracy = 1), hjust = label_hjust)) +
-  scale_fill_manual(values = c("not endangered" = "blue", "extinct" = "red")) +
-  coord_flip() +
-  labs(title = "Not-endangered and extinct",
-       x = NULL, y = NULL, fill = NULL) +
-  theme_minimal() +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
-```
-
-```{r plot exploration 4}
-ggplot() +
-  geom_sf(data = world, fill = "grey95") +
-  stat_summary_hex(data = map_data_excl_extinct, aes(longitude, latitude, z = at_risk_num),
-                   fun = mean, bins = hex_bins, alpha = 0.6) +
-  scale_fill_gradientn(colours = c("#0077B6", "#00B4D8", "#FDE725", "#E63946")) +
-  coord_sf() +
-  labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
-  theme_minimal()
+  mutate(pct = n / sum(n)) |>
+  ungroup() |>
+  mutate(family_bucket = fct_drop(family_bucket))
 ```
 
 ```{r hex refinement prep}
 # ECK4 equal-area pseudocyrlindrical projection
+# initiated before grid cells to preserve equal area across latitudes
 eck4 <- "+proj=eck4"
 
 lang_sf    <- st_as_sf(map_data_excl_extinct, coords = c("longitude", "latitude"), crs = 4326) |>
@@ -154,46 +125,66 @@ world_proj <- st_transform(world, eck4)
 ```
 
 ```{r hex prep}
+# projected CRS, cellsize in meters, hexagon shape
 grid <- st_make_grid(world_proj, cellsize = 500000, square = FALSE) |>
   st_as_sf() |>
   mutate(cell_id = row_number())
 
+# cell % at risk, n_lang
 cell_summary <- st_join(lang_sf, grid) |>
   st_drop_geometry() |>
   group_by(cell_id) |>
   summarize(pct_at_risk = mean(at_risk_num), n_lang = n(), .groups = "drop")
 
+# drop empty cells, constrain representations of large differences
 grid_plot <- grid |>
   left_join(cell_summary, by = "cell_id") |>
   filter(!is.na(n_lang)) |>
   mutate(alpha_val = scales::rescale(sqrt(n_lang), to = c(0.45, 1)))
 ```
 
+## Geography
+
 ```{r hex plot}
+#| fig-width: 10
+#| fig-height: 6
+
+
 ggplot() +
   geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
   geom_sf(data = grid_plot, aes(fill = pct_at_risk, alpha = alpha_val), color = NA) +
+  # border coastline redraw for clarity
   geom_sf(data = world_proj, fill = NA, color = "grey40", linewidth = 0.2) +
-  scale_alpha_identity() +
+  scale_alpha_identity() +    # dont rescale alpha_val
   scale_fill_distiller(palette = "OrRd", direction = 1) +
   coord_sf(crs = eck4) +
   labs(title = "Share at risk (extinct excluded)", fill = "% at risk")
 ```
+## isolates
 
-```{r isolates diverging prep}
-p_bar <- ggplot(diverging_data, aes(family_bucket, pct_signed, fill = risk_group)) +
-  geom_col() +
-  geom_text(aes(label = scales::percent(abs(pct_signed), accuracy = 1), hjust = label_hjust)) +
-  scale_fill_manual(values = c("not endangered" = "blue", "extinct" = "red")) +
+```{r iso color control}
+risk_colors <- c(
+  "not endangered" = "#2A6F97",
+  "at risk"         = "#E9A23B",
+  "extinct"         = "#B23A48"
+)
+```
+
+```{r isolates bar prep}
+p_bar <- ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group)) +
+  geom_col(position = "fill", width = 0.7) +
+  scale_fill_manual(values = risk_colors) +
+  scale_y_continuous(labels = scales::percent) +
   coord_flip() +
-  theme_minimal() +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  labs(x = NULL, y = NULL, fill = NULL) +
+  theme_minimal()
 ```
 
 ```{r iso prep 2}
 iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
 iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
+# map crops/isolate regions
 sa_box <- list(lon = c(-85, -34), lat = c(-20, 13))
 oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
 ```
@@ -213,7 +204,9 @@ iso_region <- iso_sf |>
 ```{r iso plots}
 p_map_base <- ggplot() +
   geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
-  geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), size = 1.6) +
+  geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
+             size = 1.6, position = position_jitter(width = 0.2, height = 0.2, seed = 1)) +
+  scale_color_manual(values = risk_colors) +
   theme_void() +
   theme(legend.position = "none")
 
@@ -237,8 +230,13 @@ p_callout <- ggplot() +
 ```
 
 ```{r iso combine}
+#| fig-width: 10
+#| fig-height: 6
+
+
 p_callout / (p_bar | (p_sa / p_oc)) + plot_layout(heights = c(0.25, 0.75))
 ```
+
 
 
 
@@ -247,8 +245,6 @@ p_callout / (p_bar | (p_sa / p_oc)) + plot_layout(heights = c(0.25, 0.75))
 #  dplyr::filter(is_unclear_group == TRUE) |> 
 #  View()
 ```
-
-
 
 
 # Using Quarto for presentations
