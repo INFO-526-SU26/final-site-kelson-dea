@@ -26,18 +26,20 @@ All code below taken from presentation.qmd and adapted to index.qmd's visual for
 ```{r data setup carried over from presentation slides and prep}
 #| include: false
 
-#pacman::p_load(tidyverse, kableExtra, sf, patchwork, rnaturalearth, rnaturalearthdata)
+pacman::p_load(tidyverse, kableExtra, sf, patchwork, rnaturalearth, rnaturalearthdata)
 
 # I'm replacing the pacman load because the git website publishing is failing due to not loading via pacman
 # Hopefully this explicit method fixes the publishing issue
-library(tidyverse)
-library(kableExtra)
-library(forcats)
-library(sf)
-library(ggrepel)
-library(patchwork)
-library(rnaturalearth)
-library(rnaturalearthdata)
+#library(tidyverse)
+#library(kableExtra)
+#library(forcats)
+#library(sf)
+#library(ggrepel)
+#library(patchwork)
+#library(rnaturalearth)
+#library(rnaturalearthdata)
+
+# The above didn't work, I've reverted to pacman but may try to see if I can get this working
 
 # Reading in the requisite data
 languages <- read_csv("data/languages.csv", show_col_types = FALSE)
