@@ -21,6 +21,8 @@ execute:
 
 Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what languages are most threatened.
 
+All code below taken from presentation.qmd and adapted to index.qmd's visual format when needed, as the presentation was developed first.
+
 ```{r data setup carried over from presentation slides and prep}
 #| include: false
 
@@ -116,15 +118,15 @@ In my following analysis, I collapsed the endangered statuses down to 3 categori
 
 ### Intro:
 
-For this question, I explored where endangered languages clustered geographically both by macroarea (continent/large geographical area) as well as regionally via their lat/long coordinates. Forces threatening languages and cultures originate from many diverse causes far too complicated to explore in-depth for a project such as this. However, many notable threats tend to follow geographic patterns such as: national assimilation programs, minority political marginalization, and urbanization.
+For this question, I explored where endangered languages clustered geographically both by macroarea (continent/large geographical area) as well as regionally via their lat/long coordinates. Examining the proportion of threatened languages at both the macroarea and regional grid levels allows us to analyze endangerment patterns across multiple scales while also incorporating raw macroarea language counts for overall context. Forces threatening languages and cultures originate from many diverse causes far too complicated to explore in-depth for a project such as this. However, many notable threats tend to follow geographic patterns such as: national assimilation programs, minority political marginalization, and urbanization.
 
 ### Approach:
 
-As I explored different visualization possibilities, first starting with the hexbin plots, I had difficulty reconciling the sparse but highly threatened nature of certain regions (e.g. many North American natives), with the extreme density of similarly threatened regions (e.g. Papunesia). My compromise was to create a choropleth for macroareas accompanied by a table so that I could show and discuss how much the density of endangered languages vary by region globally, thereby freeing up the hexbin plot from needing to address anything other than the percent of endangered languages in a given hexbin.
+As I explored different visualization possibilities, first starting with the hexbin plots, I had difficulty reconciling the sparse but highly threatened nature of certain regions (e.g. many North American natives) with the extreme density of other threatened regions such as Papunesia (Papua New Guinea & parts of Oceania). My compromise was to create a choropleth for macroareas accompanied by a table so that I could show and discuss how much the density of endangered languages vary by region globally, thereby freeing up the hexbin plot from needing to address anything other than the percent of endangered languages in a given hexbin.
 
 ### Analysis:
 
-```{r Q1 specific prep}
+```{r Q1 specific data prep}
 # country polygons
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -153,15 +155,22 @@ grid_plot <- grid |>
   left_join(cell_summary, by = "cell_id") |>
   filter(!is.na(n_lang))
 
-# Creating rough macroarea representations
+# Creating macroarea representations
 country_macro <- map_data_excl_extinct |>
-  # Parsing lists of multiple country associations and creating 1
+  # Parsing lists of multiple macroarea associations and creating 1
   filter(!is.na(macroarea), !str_detect(macroarea, ";"), !is.na(countries)) |>
   separate_longer_delim(countries, delim = ";") |>
   count(countries, macroarea) |>
   group_by(countries) |>
   slice_max(n, n = 1, with_ties = FALSE) |>
   ungroup()
+
+# Uruguay parses as "Eurasia" due to heavy presence of foreign languages
+# This exists to explicitly correct the above for the only failure I can find
+country_macro <- country_macro |>
+  mutate(
+    macroarea = if_else(countries == "UY", "South America", macroarea)
+  )
 
 macro_summary <- map_data_excl_extinct |>
   filter(!is.na(macroarea), !str_detect(macroarea, ";")) |>
@@ -178,7 +187,7 @@ country_risk <- world |>
 
 ::: {}
 
-```{r Q1 plot 1}
+```{r Q1 macroarea plot}
 
 ggplot(country_risk) +
   geom_sf(aes(fill = pct_at_risk), color = "grey50", linewidth = 0.15) +
@@ -204,7 +213,7 @@ ggplot(country_risk) +
 
 ::: {}
 
-```{r Q1 table}
+```{r Q1 macroarea table}
 macro_summary |>
   arrange(desc(pct_at_risk)) |>
   transmute(Region = macroarea,
@@ -218,9 +227,9 @@ macro_summary |>
 
 ::::
 
-```{r Q1 plot 2}
-#| fig-width: 10
-#| fig-height: 7
+```{r Q1 hexbin plot}
+#| fig-width: 9
+#| fig-height: 5
 #| out-width: 100%
 #| fig-align: center
 
@@ -237,7 +246,7 @@ ggplot() +
                         barwidth = unit(5, "cm")
                       )) +
   coord_sf(crs = eck4) +
-  labs(title = "Regional Distributions of Language Endangerment",
+  labs(title = "Regional Patterns of Language Endangerment",
        subtitle = "Language risk summarized in equal-area hexagons",
        caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
        fill = "% of languages at risk") +
@@ -250,9 +259,6 @@ ggplot() +
         )
 ```
 
-:::
-
-::::
 
 ### Discussion:
 
@@ -260,7 +266,7 @@ Both the macroarea and hexbin plots show a clear high-proportion of endangered l
 
 When the two plots are taken together it paints a picture of high threat regions in North America, South America, Australia, New Guinea, Oceania, and eastern Eurasia. Over the past 5 centuries these regions have been at the forefront of colonial activity, with local hunter-gatherer populations being especially vulnerable to subjugation/assimilation/lingua franca adoption pressure. As an interesting contrast, Africa is one of the least threatened macroareas for linguistic diversity. Political fragmentation and the highly local/regional nature of governance throughout the continent seems to be a likely contributor to this resiliency.
 
-## Question 2 - How does language family size/isolate status vary for endangered languages?
+## Question 2 - How does language family size/isolate status vary for endangered and extinct languages?
 
 ### Intro:
 
@@ -272,7 +278,7 @@ The analysis is largely centered on the "is_isolate" flag from the dataset, but 
 
 ### Analysis:
 
-```{r Q2 specific prep}
+```{r Q2 data prep}
 iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
 iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
@@ -293,7 +299,13 @@ iso_region <- iso_sf |>
 focus_pct <- mean(iso_region$region_focus != "elsewhere")
 ```
 
-```{r Q2 plot 1}
+```{r Q2 stacked bars}
+#| fig-width: 9
+#| fig-height: 5
+#| out-width: 90%
+#| fig-align: center
+
+
 ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group)) +
   geom_col(position = "fill", width = 0.7, color = "black", linewidth = 0.3) +
   geom_text(
@@ -314,7 +326,13 @@ ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group)) +
         legend.position = "top")
 ```
 
-```{r Q2 plot 2}
+```{r Q2 two isolate region plots}
+#| fig-width: 9
+#| fig-height: 5
+#| out-width: 90%
+#| fig-align: center
+
+
 p_map_base <- ggplot() +
   geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
   geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
@@ -359,4 +377,5 @@ p_oc <- p_map_base +
 
 The trend towards a higher proportion of extinct languages as the family size shrinks is far stronger than I had initially guessed, and unraveling why this is the case would be even more daunting than attempting to explain the geographical narrative! There are competing ways to frame the situation: is an isolate, by nature of being part of a language family so diminished that it's the only known member, simply the manifestation of us glimpsing the last stage of this trend? Do members of larger language families such as Indo-European or Niger-Congo provide a subtle support network for other intra-familial languages which bolsters their survival? Well beyond the scope of this project! Nevertheless there appears to be a vulnerability to being the last known language of a family, and I'd expect the causes to be quite dynamic and varied.
 
-One trend that is clear is the regional distribution of language isolates. With 66% of all isolates in the cropped regions of South America and Papunesia, they tell very similar but subtly distinct stories. These regions have been extremely isolated historically; both are defined by dramatically isolated valleys and inaccessibly dense jungle. The geographical nature of these regions maximizes isolation for pre-modern societies, so it's no wonder so many isolates hold on in obscure locales. However, the visualization also demonstrates that these regions occupy two different positions in endangerment. South America shows a higher proportion of extinct isolates than New Guinea, almost certainly the result of centuries of Spanish colonial expansion and stronger political centralization. New Guinea, by contrast, has retained a far higher proportion of non-extinct isolates, likely owing to its less central position in colonial projects and the persistent weak centralized government.
+One trend that is clear is the regional distribution of language isolates. With 66% of all isolates in the cropped regions of South America and the Papunesia macroarea, they tell very similar but subtly distinct stories. These regions have been extremely isolated historically; both are defined by dramatically isolated valleys and inaccessibly dense jungle. The geographical nature of these regions maximizes isolation for pre-modern societies, so it's no wonder so many isolates hold on in obscure locales. However, the visualization also demonstrates that these regions occupy two different positions in endangerment. South America shows a higher proportion of extinct isolates than New Guinea, almost certainly the result of centuries of Spanish colonial expansion and stronger political centralization. New Guinea, by contrast, has retained a far higher proportion of non-extinct isolates, likely owing to its less central position in colonial projects and the persistent weak centralized government.
+

@@ -3,9 +3,9 @@ title: "Endangered Languages of the World"
 subtitle: "INFO 526 - Summer 2026 - Final Project"
 author: "Damon Kelson"
 title-slide-attributes:
-  data-background-image: images/watercolour_sys02_img34_teacup-ocean.jpg
+  data-background-image: images/free_german_text.jpg
   data-background-size: stretch
-  data-background-opacity: "0.7"
+  data-background-opacity: "0.2"
   data-slide-number: none
 format:
   revealjs:
@@ -30,7 +30,7 @@ pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
 #| label: setup
 #| include: false
 
-# Plot theme
+# Plot theme, attempting to globally reduce empty space
 theme_set(
   theme_minimal() +
     theme(
@@ -51,7 +51,7 @@ status_order <- status |>
   pull(status_label)
 ```
 
-```{r Data prep}
+```{r group and family prep}
 unclear_groups <- c("Bookkeeping", "Unclassifiable", "Pidgin",
                      "Speech Register", "Sign Language", "Unattested",
                      "Artificial Language", "Mixed Language")
@@ -124,7 +124,7 @@ lang_sf    <- st_as_sf(map_data_excl_extinct, coords = c("longitude", "latitude"
 world_proj <- st_transform(world, eck4)
 ```
 
-```{r hex prep}
+```{r hex definitions}
 # projected CRS, cellsize in meters, hexagon shape
 # cellsize tuning for hexplot
 grid <- st_make_grid(world_proj, cellsize = 900000, square = FALSE) |>
@@ -144,7 +144,7 @@ grid_plot <- grid |>
 ```
 
 
-```{r iso color control}
+```{r isolate color control}
 # bar chart + region map shared colors
 risk_colors <- c(
   "not endangered" = "#2A6F97",
@@ -187,7 +187,7 @@ p_bar <- ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group
 )
 ```
 
-```{r iso prep 2}
+```{r isolate prep 2}
 iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
 iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
@@ -196,7 +196,7 @@ sa_box <- list(lon = c(-100, -20), lat = c(-35, 22))
 oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
 ```
 
-```{r iso regions}
+```{r isolate regions}
 # isolate calculation for combined region percent of all isolates, fun modular gimmick!
 iso_region <- iso_sf |>
   mutate(
@@ -209,7 +209,7 @@ iso_region <- iso_sf |>
   st_drop_geometry()
 ```
 
-```{r iso plots}
+```{r isolate plots}
 p_map_base <- ggplot() +
   geom_sf(data = world, fill = "grey93", color = "grey40", linewidth = 0.4) +
   geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
@@ -224,11 +224,11 @@ p_sa <- p_map_base + coord_sf(xlim = sa_box$lon, ylim = sa_box$lat, expand = FAL
     caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
     color = "Endangerment Status") +
   theme(
-    legend.position = c(1, 1),
+    legend.position = c(0.98, 0.98),
     legend.justification = c(1, 1),
     legend.spacing.y = unit(0.25, "cm"),
-    legend.key.width = unit(1.0, "cm"),
-    legend.key.height = unit(0.55, "cm"),
+    legend.key.width = unit(0.8, "cm"),
+    legend.key.height = unit(0.35, "cm"),
     legend.margin = margin(5,5,5,5),
     legend.background = element_rect(fill = "white", color = "black", linewidth = 0.5),
     plot.title = element_text(
@@ -241,11 +241,11 @@ p_oc <- p_map_base + coord_sf(xlim = oc_box$lon, ylim = oc_box$lat, expand = FAL
     title = "Australia, New Guinea & Oceania"
     ) + 
   theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5, face = "bold", size = 16), margin = margin(b = 30)
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16, margin = margin(b = 30))
         )
 ```
 
-```{r iso callout}
+```{r isolate callout}
 focus_pct <- mean(iso_region$region_focus != "elsewhere")
 
 # Section needs constant revising... think about scaling choices
@@ -261,6 +261,18 @@ p_callout <- ggplot() +
   theme(plot.margin = margin(2, 2, 2, 2))
 ```
 
+## Dataset & Analysis Questions
+
+<div style="font-size: 36px; line-height: 1.4;">
+
+* Dataset: Glottolog 5.2.1 (TidyTuesday)
+  * ~8,000 documented languages.
+  * Geographic coordinates, language families, endangerment status, isolate status...
+  
+* Analysis Questions:
+  * How does geography correlate with endangered language status?
+  * Are language isolates and small language families more vulnerable?
+</div>
 
 ## Endangerment Risk by Geographic Macroarea
 
@@ -279,6 +291,12 @@ country_macro <- map_data_excl_extinct |>
   slice_max(n, n = 1, with_ties = FALSE) |>
   ungroup()
 
+# Uruguay parses as "Eurasia" due to heavy presence of foreign languages
+# This exists to explicitly correct the above for the only failure I can find
+country_macro <- country_macro |>
+  mutate(
+    macroarea = if_else(countries == "UY", "South America", macroarea)
+  )
 
 macro_summary <- map_data_excl_extinct |>
   filter(!is.na(macroarea), !str_detect(macroarea, ";")) |>
@@ -346,7 +364,7 @@ macro_summary |>
 
 :::
 
-## Regional Distributions of Language Endangerment
+## Regional Patterns of Language Endangerment
 
 
 ```{r hex plot}
@@ -373,12 +391,13 @@ ggplot() +
   theme_minimal() +
   theme(
    legend.position = "bottom",
-   legend.title = element_text(size = 28),
-   legend.text = element_text(size = 14),
+   legend.title = element_text(size = 12),
+   legend.text = element_text(size = 12),
    axis.title = element_blank(),
    axis.text = element_blank(),
    axis.ticks = element_blank(),
-   plot.caption = element_text(size = 10)
+   plot.caption = element_text(size = 10),
+   plot.title = element_text(size = 20)
 )
 ```
 
@@ -403,12 +422,30 @@ p_bar
 
 ::: {.fill}
 
-```{r iso regions side by side}
-
+```{r isolate regions side by side}
 (p_sa ) |
 (p_oc + theme(
     legend.position = "none"
 ))
+
+# Legend/titles looks out of proportion below, but its specifications match desired rendered presentation behavior
 ```
 
 :::
+
+
+## Conclusions & Limitations
+
+<div style="font-size: 32px; line-height: 1.3;">
+
+* Highest proportions of endangered languages occur across the Americas and Papunesia.
+* Only 3% of isolates are not endangered, 44% already extinct
+
+However...
+
+* Geographic coordinates are approximate, not unimpeachably robust
+* Endangerment status categories hide deeper nuances
+* Complex web of causative factors, no simple narrative can adequately describe all scenarios
+* Limited data: no extinction data approximations, "unclear" groups separated early in analysis
+
+</div>
