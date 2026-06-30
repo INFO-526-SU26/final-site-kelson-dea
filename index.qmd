@@ -21,7 +21,7 @@ execute:
 
 Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what languages are most threatened.
 
-```{r data setup carried over from presentation file}
+```{r data setup carried over from presentation slides and prep}
 #| include: false
 
 pacman::p_load(tidyverse, kableExtra, sf, patchwork, rnaturalearth, rnaturalearthdata)
@@ -82,6 +82,8 @@ lang_base <- languages |>
     ))
   )
 
+lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
+
 # map with extinction dropped
 map_data_excl_extinct <- lang_geo |>
   filter(risk_group %in% c("not endangered", "at risk")) |>
@@ -106,7 +108,7 @@ family_severity <- lang_base |>
 
 ## Introduction
 
-This project utilizes the tree TidyTuesday datasets from Glottolog, a comprehensive reference catalog of the world's languages. The core dataset covers over 8000 languages and their accompanying family, geographic coordinates, macroarea label, and country associations. The endangered_status.csv associates each language with a 1-6 scale, (1) being not endangered through shifting, threatened, moribund, nearly extinct, to full extinct (6). 
+This project utilizes the three TidyTuesday datasets from Glottolog, a comprehensive reference catalog of the world's languages. The core dataset covers over 8000 languages and their accompanying family, geographic coordinates, macroarea label, and country associations. The endangered_status.csv associates each language with a 1-6 scale, (1) being not endangered through shifting, threatened, moribund, nearly extinct, to full extinct (6). 
 
 In my following analysis, I collapsed the endangered statuses down to 3 categories: not endangered (code 1), at risk (codes 2 through 4), and extinct (code 6). This was done to create a broad distinction between languages in the middle which are facing varying levels of threats to their survival, from languages which are doing fine to those that are no longer around (extinct languages of course being no longer "under threat"). An important note on what I've grouped as "unclear groups": these are languages such as sign languages, pidgins, artificial languages (e.g. esperanto, fantasy fiction, etc.) and so on which were either inappropriate for this analysis or were unfortunately not attested strongly enough in the data set to meaningfully analyze. Unfortunately "unclassifiable" and "unattested" DO contain interesting languages relevant to this analysis, but their completeness in the dataset was not adequate for the scope of this analysis or the time available.
 
@@ -125,7 +127,6 @@ As I explored different visualization possibilities, first starting with the hex
 ```{r Q1 specific prep}
 # country polygons
 world <- ne_countries(scale = "medium", returnclass = "sf")
-lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
 
 # ECK4 equal-area pseudocyrlindrical projection
 # initiated before grid cells to preserve equal area across latitudes
@@ -151,9 +152,7 @@ cell_summary <- st_join(lang_sf, grid) |>
 grid_plot <- grid |>
   left_join(cell_summary, by = "cell_id") |>
   filter(!is.na(n_lang))
-```
 
-```{r}
 # Creating rough macroarea representations
 country_macro <- map_data_excl_extinct |>
   # Parsing lists of multiple country associations and creating 1
@@ -175,10 +174,85 @@ country_risk <- world |>
   left_join(macro_summary, by = "macroarea")
 ```
 
-```{r}
+:::: {layout="[[70,30]]"}
 
+::: {}
+
+```{r Q1 plot 1}
+
+ggplot(country_risk) +
+  geom_sf(aes(fill = pct_at_risk), color = "grey50", linewidth = 0.15) +
+  scale_fill_gradient(low = "grey90", high = "#C0392B",
+                      labels = scales::percent,
+                      na.value = "white",
+                      guide = guide_colorbar(
+                        title.position = "top",
+                        title.hjust = 0.5,
+                        barwidth = unit(5, "cm")
+                      )
+  ) +
+  labs(title = "Endangerment Risk by Geographic Macroarea",
+       subtitle = "Regions colored by the share of at-risk languages in their macroarea (extinct excluded)",
+       caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
+       fill = "% of languages at risk") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank())
 ```
 
+:::
+
+::: {}
+
+```{r Q1 table}
+macro_summary |>
+  arrange(desc(pct_at_risk)) |>
+  transmute(Region = macroarea,
+            `% at risk` = scales::percent(pct_at_risk, accuracy = 1),
+            `N languages` = n_lang) |>
+  kable() |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+:::
+
+::::
+
+```{r Q1 plot 2}
+#| fig-width: 10
+#| fig-height: 7
+#| out-width: 100%
+#| fig-align: center
+
+ggplot() +
+  geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
+  geom_sf(data = grid_plot, aes(fill = pct_at_risk), color = NA) +
+  geom_sf(data = world_proj, fill = NA, color = "grey30", linewidth = 0.2) +
+  scale_fill_gradient(low = "grey90",
+                      high = "#C0392B",
+                      labels = scales::percent,
+                      guide = guide_colorbar(
+                        title.position = "top",
+                        title.hjust = 0.5,
+                        barwidth = unit(5, "cm")
+                      )) +
+  coord_sf(crs = eck4) +
+  labs(title = "Regional Distributions of Language Endangerment",
+       subtitle = "Language risk summarized in equal-area hexagons",
+       caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
+       fill = "% of languages at risk") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size=18)
+        )
+```
+
+:::
+
+::::
 
 ### Discussion:
 
@@ -190,16 +264,20 @@ When the two plots are taken together it paints a picture of high threat regions
 
 ### Intro:
 
+Language isolates are languages which are not known to be related to any other language. They represent highly vulnerable branches of human culture, by definition they are the last known surviving member of their linguistic branch. Initially this question was focused primarily on the numerical proportions of extinct languages by family size. Exploring this question began without any solid geographical or regional consideration, but very early on I realized this question was intimately tied to two regions: South America and Papua New Guinea. Depending on how you define the regions exactly, these two together constitute over 60% of all known isolates.
+
 ### Approach:
+
+The analysis is largely centered on the "is_isolate" flag from the dataset, but the second visualization pulls heavily from the previous geographical preparation in order to highlight the two regions of interest. A 100% stacked bar chart was a natural fit for comparisons among family groups by their relative proportions of not endangered/at risk/extinct, and I wanted them to "flow downward" in a sense to highlight the growing proportion of "extinct" as the family became smaller. The second visual was meant to accompany the narrative the bar chart builds, which is that very few isolates are "not endangered", only 3% in-fact. With 66% of all isolates in the world contained in these two regions, the narrative of "high risk" for isolates provides powerful context for how especially threatened these two regions are.
 
 ### Analysis:
 
-```{r}
+```{r Q2 specific prep}
 iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
 iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
 # map crops/isolate regions, also used in calculations
-sa_box <- list(lon = c(-85, -34), lat = c(-20, 13))
+sa_box <- list(lon = c(-100, -20), lat = c(-35, 22))
 oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
 
 iso_region <- iso_sf |>
@@ -215,11 +293,70 @@ iso_region <- iso_sf |>
 focus_pct <- mean(iso_region$region_focus != "elsewhere")
 ```
 
-```{r}
+```{r Q2 plot 1}
+ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group)) +
+  geom_col(position = "fill", width = 0.7, color = "black", linewidth = 0.3) +
+  geom_text(
+    aes(label = scales::percent(pct, accuracy = 1), size = label_size, fontface = label_face,
+        group = risk_group),
+    position = position_fill(vjust = 0.5), color = "white"
+  ) +
+  scale_size_identity() +
+  scale_fill_manual(values = risk_colors) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  coord_flip() +
+  labs(x = NULL, y = NULL, fill = NULL,
+       title = "Language Endangerment by Family Size",
+       caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+        legend.position = "top")
+```
 
+```{r Q2 plot 2}
+p_map_base <- ggplot() +
+  geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
+  geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
+             size = 1.6, position = position_jitter(width = 0.2, height = 0.2, seed = 1)) +
+  scale_color_manual(values = risk_colors) +
+  theme_void() +
+  theme(legend.position = "none")
+
+p_sa <- p_map_base +
+  coord_sf(xlim = sa_box$lon, ylim = sa_box$lat, expand = FALSE) +
+  labs(title = "Northern South America", color = "Endangerment Status") +
+  theme(
+  legend.position = c(0.97, 0.97),
+  legend.justification = c(1, 1),
+  legend.margin = margin(3, 4, 3, 4),
+  legend.key.size = unit(0.35, "cm"),
+  legend.title = element_text(size = 8, face = "bold"),
+  legend.text = element_text(size = 7),
+  legend.background = element_rect(fill = "white", color = "black", linewidth = 0.6),
+  plot.margin = margin(t = 5.5, r = 8, b = 5.5, l = 5.5),
+  plot.title = element_text(hjust = 0.5, face = "bold", size = 14, margin = margin(b = 15))
+) +
+  guides(color = guide_legend(override.aes = list(size = 1.8)))
+
+p_oc <- p_map_base +
+  coord_sf(xlim = oc_box$lon, ylim = oc_box$lat, expand = FALSE) +
+  labs(title = "Australia, New Guinea & Oceania") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14, margin = margin(b = 15)))
+
+(p_sa | p_oc) +
+  plot_annotation(
+    title = paste0(scales::percent(focus_pct, accuracy = 1),
+                   " of Language Isolates are Concentrated in Two Regions"),
+    caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
+    theme = theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5,
+                                             margin = margin(b = 20)))
+  )
 ```
 
 
 ### Discussion:
 
-## Conclusion
+The trend towards a higher proportion of extinct languages as the family size shrinks is far stronger than I had initially guessed, and unraveling why this is the case would be even more daunting than attempting to explain the geographical narrative! There are competing ways to frame the situation: is an isolate, by nature of being part of a language family so diminished that it's the only known member, simply the manifestation of us glimpsing the last stage of this trend? Do members of larger language families such as Indo-European or Niger-Congo provide a subtle support network for other intra-familial languages which bolsters their survival? Well beyond the scope of this project! Nevertheless there appears to be a vulnerability to being the last known language of a family, and I'd expect the causes to be quite dynamic and varied.
+
+One trend that is clear is the regional distribution of language isolates. With 66% of all isolates in the cropped regions of South America and Papunesia, they tell very similar but subtly distinct stories. These regions have been extremely isolated historically; both are defined by dramatically isolated valleys and inaccessibly dense jungle. The geographical nature of these regions maximizes isolation for pre-modern societies, so it's no wonder so many isolates hold on in obscure locales. However, the visualization also demonstrates that these regions occupy two different positions in endangerment. South America shows a higher proportion of extinct isolates than New Guinea, almost certainly the result of centuries of Spanish colonial expansion and stronger political centralization. New Guinea, by contrast, has retained a far higher proportion of non-extinct isolates, likely owing to its less central position in colonial projects and the persistent weak centralized government.

@@ -172,16 +172,15 @@ p_bar <- ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group
   scale_fill_manual(values = risk_colors) +
   guides(fill = guide_legend(reverse = TRUE)) +
   coord_flip() +
-  labs(x = NULL, y = NULL, fill = NULL) +
+  labs(x = NULL, y = NULL, fill = NULL, caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)") +
   theme_minimal() +
   theme(
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-
+    plot.caption = element_text(size = 10),
     legend.position = "top",
-
     legend.text = element_text(size = 18),
     legend.key.size = unit(1, "cm"),
     axis.text.y = element_text(size = 18)
@@ -193,7 +192,7 @@ iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
 iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
 
 # map crops/isolate regions, also used in calculations
-sa_box <- list(lon = c(-85, -34), lat = c(-20, 13))
+sa_box <- list(lon = c(-100, -20), lat = c(-35, 22))
 oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
 ```
 
@@ -212,7 +211,7 @@ iso_region <- iso_sf |>
 
 ```{r iso plots}
 p_map_base <- ggplot() +
-  geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
+  geom_sf(data = world, fill = "grey93", color = "grey40", linewidth = 0.4) +
   geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
              size = 4, position = position_jitter(width = 0.2, height = 0.2, seed = 1)) +
   scale_color_manual(values = risk_colors) +
@@ -220,10 +219,30 @@ p_map_base <- ggplot() +
   theme(legend.position = "none")
 
 p_sa <- p_map_base + coord_sf(xlim = sa_box$lon, ylim = sa_box$lat, expand = FALSE) +
-  labs(title = "Northern South America", color = "Status") +
-  theme(legend.position = "none")
+  labs(
+    title = "Northern South America",
+    caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)",
+    color = "Endangerment Status") +
+  theme(
+    legend.position = c(1, 1),
+    legend.justification = c(1, 1),
+    legend.spacing.y = unit(0.25, "cm"),
+    legend.key.width = unit(1.0, "cm"),
+    legend.key.height = unit(0.55, "cm"),
+    legend.margin = margin(5,5,5,5),
+    legend.background = element_rect(fill = "white", color = "black", linewidth = 0.5),
+    plot.title = element_text(
+      hjust = 0.5, face = "bold", size = 16, margin = margin(b = 30)
+    ),
+    plot.caption = element_text(size = 10)
+    )
 p_oc <- p_map_base + coord_sf(xlim = oc_box$lon, ylim = oc_box$lat, expand = FALSE) +
-  labs(title = "Australia, New Guinea & Oceania")
+  labs(
+    title = "Australia, New Guinea & Oceania"
+    ) + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16), margin = margin(b = 30)
+        )
 ```
 
 ```{r iso callout}
@@ -243,7 +262,7 @@ p_callout <- ggplot() +
 ```
 
 
-## Macroarea
+## Endangerment Risk by Geographic Macroarea
 
 ::: {.fill}
 
@@ -299,9 +318,10 @@ ggplot(country_risk) +
   legend.text = element_text(size = 14),
   axis.title = element_blank(),
   axis.text = element_blank(),
-  axis.ticks = element_blank()
+  axis.ticks = element_blank(),
+  plot.caption = element_text(size = 10)
 ) +
-  labs(title = NULL, fill = "% at risk")
+  labs(title = NULL, caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)", fill = "% of languages at risk")
 ```
 
 :::
@@ -326,8 +346,7 @@ macro_summary |>
 
 :::
 
-## Geography
-
+## Regional Distributions of Language Endangerment
 
 
 ```{r hex plot}
@@ -341,7 +360,7 @@ ggplot() +
   geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
   geom_sf(data = grid_plot, aes(fill = pct_at_risk), color = NA) +
   # border coastline redraw for clarity
-  geom_sf(data = world_proj, fill = NA, color = "grey30", linewidth = 0.2) +
+  geom_sf(data = world_proj, fill = NA, color = "grey10", linewidth = 0.4) +
   scale_fill_gradient(low = "grey90", high = "#C0392B", labels = scales::percent,
   guide = guide_colorbar(
     title.position = "top",
@@ -350,21 +369,22 @@ ggplot() +
     barheight = unit(0.7, "cm")
 )) +
   coord_sf(crs = eck4) +
-  labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
+  labs(title = "Language risk summarized in equal-area hexagons", caption = "Glottolog 5.2.1 (via TidyTuesday, 2025-12-23)", fill = "% of languages at risk") +
   theme_minimal() +
   theme(
-  legend.position = "bottom",
-  legend.title = element_text(size = 16),
-  legend.text = element_text(size = 14),
-  axis.title = element_blank(),
-  axis.text = element_blank(),
-  axis.ticks = element_blank()
+   legend.position = "bottom",
+   legend.title = element_text(size = 28),
+   legend.text = element_text(size = 14),
+   axis.title = element_blank(),
+   axis.text = element_blank(),
+   axis.ticks = element_blank(),
+   plot.caption = element_text(size = 10)
 )
 ```
 
 
 
-## Risk by Family Size
+## Language Endangerment <br>by Family Size
 
 
 
@@ -379,16 +399,13 @@ p_bar
 
 
 
-## `r scales::percent(focus_pct, accuracy = 1)`% of isolates sit in two regions South America and New Guinea
+## `r scales::percent(focus_pct, accuracy = 1)` of Language Isolates are <br>Concentrated in Two Regions
 
 ::: {.fill}
 
 ```{r iso regions side by side}
-(p_sa + theme(
-    legend.position = "right",
-    legend.text = element_text(size = 12)
-    #legend.margin = margin(t = 0, r = 25, b = 0, l = 0, unit = "pt")
-)) |
+
+(p_sa ) |
 (p_oc + theme(
     legend.position = "none"
 ))
