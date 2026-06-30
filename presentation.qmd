@@ -21,8 +21,19 @@ execute:
 #| include: false
 
 # Load packages here
-pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
-               patchwork, cowplot, rnaturalearth, rnaturalearthdata)
+#pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
+#               patchwork, cowplot, rnaturalearth, rnaturalearthdata)
+
+# I'm replacing the pacman load because the git website publishing is failing due to not loading via pacman
+# Hopefully this explicit method fixes the publishing issue
+library(tidyverse)
+library(kableExtra)
+library(forcats)
+library(sf)
+library(ggrepel)
+library(patchwork)
+library(rnaturalearth)
+library(rnaturalearthdata)
 
 ```
 
