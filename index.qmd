@@ -21,7 +21,7 @@ execute:
 
 Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what languages are most threatened.
 
-All code below taken from presentation.qmd and adapted to index.qmd's visual format when needed, as the presentation was developed first.
+All code below taken from presentation.qmd and adapted to index.qmd's visual format when needed, as the presentation was developed first. 
 
 ```{r data setup carried over from presentation slides and prep}
 #| include: false

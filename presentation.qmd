@@ -145,7 +145,7 @@ grid_plot <- grid |>
 
 
 ```{r isolate color control}
-# bar chart + region map shared colors
+# bar chart + region map shared colors 
 risk_colors <- c(
   "not endangered" = "#2A6F97",
   "at risk"         = "#E9A23B",
