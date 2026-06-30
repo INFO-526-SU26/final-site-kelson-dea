@@ -31,15 +31,12 @@ pacman::p_load(tidyverse, kableExtra, forcats, sf, ggrepel,
 #| include: false
 
 # Plot theme
-#ggplot2::theme_set(ggplot2::theme_minimal(base_size = 11))
-
-# For better figure resolution
-#knitr::opts_chunk$set(
-#  fig.retina = 3, 
-#  dpi = 300, 
-#  fig.width = 6, 
-#  fig.asp = 0.618 
-#  )
+theme_set(
+  theme_minimal() +
+    theme(
+      plot.margin = margin(0,0,0,0)
+    )
+)
 ```
 
 
@@ -146,26 +143,6 @@ grid_plot <- grid |>
   filter(!is.na(n_lang))
 ```
 
-## Geography
-
-```{r hex plot}
-#| fig-width: 10
-#| fig-height: 6
-
-
-ggplot() +
-  geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
-  geom_sf(data = grid_plot, aes(fill = pct_at_risk), color = NA) +
-  # border coastline redraw for clarity
-  geom_sf(data = world_proj, fill = NA, color = "grey30", linewidth = 0.2) +
-  scale_fill_gradient(low = "grey90", high = "#C0392B", labels = scales::percent) +
-  coord_sf(crs = eck4) +
-  labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom"
-  )
-```
 
 ```{r iso color control}
 # bar chart + region map shared colors
@@ -180,7 +157,7 @@ risk_colors <- c(
 # bar chart family labeling
 family_severity <- family_severity |>
   mutate(
-    label_size = if_else(risk_group == "extinct", 4.2, 3.2),
+    label_size = if_else(risk_group == "extinct", 6, 4),
     label_face = if_else(risk_group == "extinct", "bold", "plain")
   )
 
@@ -193,14 +170,22 @@ p_bar <- ggplot(family_severity, aes(x = family_bucket, y = n, fill = risk_group
   ) +
   scale_size_identity() +
   scale_fill_manual(values = risk_colors) +
+  guides(fill = guide_legend(reverse = TRUE)) +
   coord_flip() +
   labs(x = NULL, y = NULL, fill = NULL) +
   theme_minimal() +
   theme(
-    axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-    panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
-    legend.position = "top"
-  )
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+
+    legend.position = "top",
+
+    legend.text = element_text(size = 18),
+    legend.key.size = unit(1, "cm"),
+    axis.text.y = element_text(size = 18)
+)
 ```
 
 ```{r iso prep 2}
@@ -229,13 +214,14 @@ iso_region <- iso_sf |>
 p_map_base <- ggplot() +
   geom_sf(data = world, fill = "grey95", color = "grey90", linewidth = 0.2) +
   geom_point(data = iso_geo, aes(longitude, latitude, color = risk_group), alpha = 0.7,
-             size = 1.6, position = position_jitter(width = 0.2, height = 0.2, seed = 1)) +
+             size = 4, position = position_jitter(width = 0.2, height = 0.2, seed = 1)) +
   scale_color_manual(values = risk_colors) +
   theme_void() +
   theme(legend.position = "none")
 
 p_sa <- p_map_base + coord_sf(xlim = sa_box$lon, ylim = sa_box$lat, expand = FALSE) +
-  labs(title = "Northern South America")
+  labs(title = "Northern South America", color = "Status") +
+  theme(legend.position = "none")
 p_oc <- p_map_base + coord_sf(xlim = oc_box$lon, ylim = oc_box$lat, expand = FALSE) +
   labs(title = "Australia, New Guinea & Oceania")
 ```
@@ -256,81 +242,156 @@ p_callout <- ggplot() +
   theme(plot.margin = margin(2, 2, 2, 2))
 ```
 
-## `r scales::percent(focus_pct, accuracy = 1)` of isolates sit in two regions South America and New Guinea
 
-```{r iso combine}
+## Macroarea
+
+::: {.fill}
+
+:::: {.columns}
+
+::: {.column width="70%"}
+
+```{r macroarea prep}
+country_macro <- map_data_excl_extinct |>
+  filter(!is.na(macroarea), !str_detect(macroarea, ";"), !is.na(countries)) |>
+  separate_longer_delim(countries, delim = ";") |>
+  count(countries, macroarea) |>
+  group_by(countries) |>
+  slice_max(n, n = 1, with_ties = FALSE) |>
+  ungroup()
+
+
+macro_summary <- map_data_excl_extinct |>
+  filter(!is.na(macroarea), !str_detect(macroarea, ";")) |>
+  group_by(macroarea) |>
+  summarize(pct_at_risk = mean(at_risk_num), n_lang = n(), .groups = "drop")
+
+country_risk <- world |>
+  left_join(country_macro, by = c("iso_a2_eh" = "countries")) |>
+  left_join(macro_summary, by = "macroarea")
+```
+
+```{r macroarea plot}
 #| fig-width: 10
-#| fig-height: 6
+#| fig-height: 7
+#| out-width: 100%
+#| fig-align: center
 
 
-p_callout / (p_bar | (p_sa / p_oc)) + plot_layout(heights = c(0.25, 0.75))
+ggplot(country_risk) +
+  geom_sf(aes(fill = pct_at_risk), color = "grey50", linewidth = 0.15) +
+  scale_fill_gradient(
+  low = "grey90",
+  high = "#C0392B",
+  labels = scales::percent,
+  na.value = "white",
+  guide = guide_colorbar(
+    barwidth = unit(10, "cm"),
+    barheight = unit(0.7, "cm"),
+    title.position = "top",
+    title.hjust = 0.5
+)
+) +
+  theme_minimal() +
+  theme(
+  legend.position = "bottom",
+  legend.title = element_text(size = 16),
+  legend.text = element_text(size = 14),
+  axis.title = element_blank(),
+  axis.text = element_blank(),
+  axis.ticks = element_blank()
+) +
+  labs(title = NULL, fill = "% at risk")
+```
+
+:::
+
+::: {.column width="30%"}
+
+<br>
+
+```{r macro area table}
+macro_summary |>
+  arrange(desc(pct_at_risk)) |>
+  transmute(Region = macroarea,
+            `% at risk` = scales::percent(pct_at_risk, accuracy = 1),
+            `Number of Languages` = n_lang) |>
+  kable() |>
+  kable_styling(font_size = 16)
+```
+
+:::
+
+::::
+
+:::
+
+## Geography
+
+
+
+```{r hex plot}
+#| fig-width: 10
+#| fig-height: 7
+#| out-width: 100%
+#| fig-align: center
+
+
+ggplot() +
+  geom_sf(data = world_proj, fill = "grey97", color = "grey90", linewidth = 0.15) +
+  geom_sf(data = grid_plot, aes(fill = pct_at_risk), color = NA) +
+  # border coastline redraw for clarity
+  geom_sf(data = world_proj, fill = NA, color = "grey30", linewidth = 0.2) +
+  scale_fill_gradient(low = "grey90", high = "#C0392B", labels = scales::percent,
+  guide = guide_colorbar(
+    title.position = "top",
+    title.hjust = 0.5,
+    barwidth = unit(10, "cm"),
+    barheight = unit(0.7, "cm")
+)) +
+  coord_sf(crs = eck4) +
+  labs(title = "Share at risk (extinct excluded)", fill = "% at risk") +
+  theme_minimal() +
+  theme(
+  legend.position = "bottom",
+  legend.title = element_text(size = 16),
+  legend.text = element_text(size = 14),
+  axis.title = element_blank(),
+  axis.text = element_blank(),
+  axis.ticks = element_blank()
+)
 ```
 
 
-# Using Quarto for presentations
 
-## Quarto
+## Risk by Family Size
 
-- The presentation is created using the Quarto CLI
 
-- `##` sets the start of a new slide
 
-## Layouts
+```{r bar chart slide}
+#| fig-width: 10
+#| fig-height: 7
+#| out-width: 100%
+#| fig-align: center
 
-You can use plain text
-
-::::: columns
-::: {.column width="40%"}
-- or bullet points[^1]
-:::
-
-::: {.column width="60%"}
-or in two columns
-:::
-:::::
-
-[^1]: And add footnotes
-
-- like
-
-- this
-
-## Plot and text
-
-::::: columns
-::: {.column width="50%"}
-- Some text
-
-- goes here
-:::
-
-::: {.column width="50%"}
-```{r, warning=FALSE, fig.width=5.5}
-#penguins |>
-#  ggplot(aes(x = bill_length_mm, y = species, color = species)) +
-#  geom_boxplot(linewidth = 0.75,
-#               outlier.size = 2.5) +
-#  theme_minimal(base_size = 15) +
-#  theme(legend.key.size = unit(0.8, "cm"))
-```
-:::
-:::::
-
-# A new section...
-
-## Tables
-
-If you want to generate a table, make sure it is in the HTML format (instead of Markdown or other formats), e.g.,
-
-```{r}
-#penguins |> 
-#  head() |>
-#  kableExtra::kable(format = "html") |>
-#  kableExtra::kable_styling()
+p_bar
 ```
 
-## Feeling adventurous?
 
-- You are welcomed to use the default styling of the slides. In fact, that's what I expect majority of you will do. You will differentiate yourself with the content of your presentation.
 
-- But some of you might want to play around with slide styling. Some solutions for this can be found at https://quarto.org/docs/presentations/revealjs.
+## `r scales::percent(focus_pct, accuracy = 1)`% of isolates sit in two regions South America and New Guinea
+
+::: {.fill}
+
+```{r iso regions side by side}
+(p_sa + theme(
+    legend.position = "right",
+    legend.text = element_text(size = 12)
+    #legend.margin = margin(t = 0, r = 25, b = 0, l = 0, unit = "pt")
+)) |
+(p_oc + theme(
+    legend.position = "none"
+))
+```
+
+:::

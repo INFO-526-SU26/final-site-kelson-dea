@@ -19,4 +19,207 @@ execute:
 
 ## Abstract
 
-Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what is endangered.
+Linguistic analysis reveals historical and cultural details that track the geographic distribution of human populations. Endangered languages represent the potential extinction of certain subsets of human culture containing unique myths and history. This project aims to analyze the global spread of endangered languages, evaluating both their geography and numerical features of their language family, to better understand what languages are most threatened.
+
+```{r data setup carried over from presentation file}
+#| include: false
+
+pacman::p_load(tidyverse, kableExtra, sf, patchwork, rnaturalearth, rnaturalearthdata)
+
+# Reading in the requisite data
+languages <- read_csv("data/languages.csv", show_col_types = FALSE)
+status    <- read_csv("data/endangered_status.csv", show_col_types = FALSE)
+families  <- read_csv("data/families.csv", show_col_types = FALSE)
+
+# Ordering status labels
+status_order <- status |>
+  distinct(status_code, status_label) |>
+  arrange(status_code) |>
+  pull(status_label)
+
+# Unclear groups are groups of languages that do not easily fit in this analysis
+# All together, this is about 10% of the data!
+unclear_groups <- c("Bookkeeping", "Unclassifiable", "Pidgin",
+                    "Speech Register", "Sign Language", "Unattested",
+                    "Artificial Language", "Mixed Language")
+
+# Family size determination for later use
+family_size <- languages |>
+  filter(!is.na(family_id)) |>
+  count(family_id, name = "family_size")
+
+# Defined colors for common usage across some later plots
+risk_colors <- c(
+  "not endangered" = "#2A6F97",
+  "at risk"        = "#E9A23B",
+  "extinct"        = "#B23A48"
+)
+
+# The base level dataset, with joins
+lang_base <- languages |>
+  left_join(status, by = "id") |>
+  left_join(families, by = c("family_id" = "id")) |>
+  left_join(family_size, by = "family_id") |>
+  mutate(
+    status_label = factor(status_label, levels = status_order, ordered = TRUE),
+    # 3-category split: 1 | 2,3,4,5 | 6... NA kept around (~5%)
+    risk_group = case_when(
+      status_code == 1     ~ "not endangered",
+      status_code %in% 2:5 ~ "at risk",
+      status_code == 6     ~ "extinct"
+    ),
+    risk_group = factor(risk_group, levels = c("not endangered", "at risk", "extinct")),
+    is_unclear_group = family %in% unclear_groups,
+    family_bucket = case_when(
+      is_isolate       ~ "isolate",
+      is_unclear_group ~ "unclear (exclude)",
+      family_size <= 10  ~ "small (2-10)",
+      family_size <= 50  ~ "medium (11-50)",
+      family_size > 50   ~ "large (50+)"
+    ),
+    family_bucket = factor(family_bucket, levels = c(
+      "isolate", "small (2-10)", "medium (11-50)", "large (50+)", "unclear (exclude)"
+    ))
+  )
+
+# map with extinction dropped
+map_data_excl_extinct <- lang_geo |>
+  filter(risk_group %in% c("not endangered", "at risk")) |>
+  mutate(at_risk_num = as.numeric(risk_group == "at risk"))
+
+# per family risk severity breakdown
+family_severity <- lang_base |>
+  filter(!is.na(risk_group), family_bucket != "unclear (exclude)") |>
+  count(family_bucket, risk_group) |>
+  group_by(family_bucket) |>
+  mutate(pct = n / sum(n)) |>
+  ungroup() |>
+  mutate(
+    # Ease of controlling bar formatting
+    family_bucket = fct_drop(family_bucket),
+    label_size = if_else(risk_group == "extinct", 4, 3),
+    label_face = if_else(risk_group == "extinct", "bold", "plain")
+  )
+
+```
+
+
+## Introduction
+
+This project utilizes the tree TidyTuesday datasets from Glottolog, a comprehensive reference catalog of the world's languages. The core dataset covers over 8000 languages and their accompanying family, geographic coordinates, macroarea label, and country associations. The endangered_status.csv associates each language with a 1-6 scale, (1) being not endangered through shifting, threatened, moribund, nearly extinct, to full extinct (6). 
+
+In my following analysis, I collapsed the endangered statuses down to 3 categories: not endangered (code 1), at risk (codes 2 through 4), and extinct (code 6). This was done to create a broad distinction between languages in the middle which are facing varying levels of threats to their survival, from languages which are doing fine to those that are no longer around (extinct languages of course being no longer "under threat"). An important note on what I've grouped as "unclear groups": these are languages such as sign languages, pidgins, artificial languages (e.g. esperanto, fantasy fiction, etc.) and so on which were either inappropriate for this analysis or were unfortunately not attested strongly enough in the data set to meaningfully analyze. Unfortunately "unclassifiable" and "unattested" DO contain interesting languages relevant to this analysis, but their completeness in the dataset was not adequate for the scope of this analysis or the time available.
+
+## Question 1 - How does geography correlate with endangered language status?
+
+### Intro:
+
+For this question, I explored where endangered languages clustered geographically both by macroarea (continent/large geographical area) as well as regionally via their lat/long coordinates. Forces threatening languages and cultures originate from many diverse causes far too complicated to explore in-depth for a project such as this. However, many notable threats tend to follow geographic patterns such as: national assimilation programs, minority political marginalization, and urbanization.
+
+### Approach:
+
+As I explored different visualization possibilities, first starting with the hexbin plots, I had difficulty reconciling the sparse but highly threatened nature of certain regions (e.g. many North American natives), with the extreme density of similarly threatened regions (e.g. Papunesia). My compromise was to create a choropleth for macroareas accompanied by a table so that I could show and discuss how much the density of endangered languages vary by region globally, thereby freeing up the hexbin plot from needing to address anything other than the percent of endangered languages in a given hexbin.
+
+### Analysis:
+
+```{r Q1 specific prep}
+# country polygons
+world <- ne_countries(scale = "medium", returnclass = "sf")
+lang_geo <- lang_base |> filter(!is.na(latitude), !is.na(longitude))
+
+# ECK4 equal-area pseudocyrlindrical projection
+# initiated before grid cells to preserve equal area across latitudes
+eck4 <- "+proj=eck4"
+
+lang_sf    <- st_as_sf(map_data_excl_extinct, coords = c("longitude", "latitude"), crs = 4326) |>
+  st_transform(eck4)
+world_proj <- st_transform(world, eck4)
+
+# projected CRS, cellsize in meters, hexagon shape
+# cellsize tuning for hexplot
+grid <- st_make_grid(world_proj, cellsize = 900000, square = FALSE) |>
+  st_as_sf() |>
+  mutate(cell_id = row_number())
+
+# per cell % at risk, n_lang
+cell_summary <- st_join(lang_sf, grid) |>
+  st_drop_geometry() |>
+  group_by(cell_id) |>
+  summarize(pct_at_risk = mean(at_risk_num), n_lang = n(), .groups = "drop")
+
+# drop empty cells, constrain representations of large differences
+grid_plot <- grid |>
+  left_join(cell_summary, by = "cell_id") |>
+  filter(!is.na(n_lang))
+```
+
+```{r}
+# Creating rough macroarea representations
+country_macro <- map_data_excl_extinct |>
+  # Parsing lists of multiple country associations and creating 1
+  filter(!is.na(macroarea), !str_detect(macroarea, ";"), !is.na(countries)) |>
+  separate_longer_delim(countries, delim = ";") |>
+  count(countries, macroarea) |>
+  group_by(countries) |>
+  slice_max(n, n = 1, with_ties = FALSE) |>
+  ungroup()
+
+macro_summary <- map_data_excl_extinct |>
+  filter(!is.na(macroarea), !str_detect(macroarea, ";")) |>
+  group_by(macroarea) |>
+  summarize(pct_at_risk = mean(at_risk_num), n_lang = n(), .groups = "drop")
+
+# Least error-prone join between rnaturalearth and my base dataset coords
+country_risk <- world |>
+  left_join(country_macro, by = c("iso_a2_eh" = "countries")) |>
+  left_join(macro_summary, by = "macroarea")
+```
+
+```{r}
+
+```
+
+
+### Discussion:
+
+Both the macroarea and hexbin plots show a clear high-proportion of endangered languages across the Americas as well as Australia. However, Papunesia and eastern Eurasia do not convey an especially endangered-looking situation in the macroarea plot. In contrast, the hexbin plot more clearly demonstrates how many regions in central and eastern Siberia contain endangered languages, when separated from the more numerous and less proportionately endangered regions of Europe/Middle east/South Asia. The macroarea plot with its table excels relative to the hexbin approach by supplying context; as dire as the situation in Australia appears (99% at risk, 134 languages), Papunesia's absolute magnitude of linguistic diversity (65% at risk, 2041 languages!) defies understanding with any attempt at characterization that's not highly regional.
+
+When the two plots are taken together it paints a picture of high threat regions in North America, South America, Australia, New Guinea, Oceania, and eastern Eurasia. Over the past 5 centuries these regions have been at the forefront of colonial activity, with local hunter-gatherer populations being especially vulnerable to subjugation/assimilation/lingua franca adoption pressure. As an interesting contrast, Africa is one of the least threatened macroareas for linguistic diversity. Political fragmentation and the highly local/regional nature of governance throughout the continent seems to be a likely contributor to this resiliency.
+
+## Question 2 - How does language family size/isolate status vary for endangered languages?
+
+### Intro:
+
+### Approach:
+
+### Analysis:
+
+```{r}
+iso_geo <- lang_base |> filter(is_isolate, !is.na(latitude), !is.na(longitude))
+iso_sf  <- st_as_sf(iso_geo, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+# map crops/isolate regions, also used in calculations
+sa_box <- list(lon = c(-85, -34), lat = c(-20, 13))
+oc_box <- list(lon = c(110, 175), lat = c(-45, 5))
+
+iso_region <- iso_sf |>
+  mutate(
+    region_focus = case_when(
+      between(latitude, sa_box$lat[1], sa_box$lat[2]) & between(longitude, sa_box$lon[1], sa_box$lon[2]) ~ "Northern South America",
+      between(latitude, oc_box$lat[1], oc_box$lat[2]) & between(longitude, oc_box$lon[1], oc_box$lon[2]) ~ "Australia, New Guinea & Oceania",
+      TRUE ~ "elsewhere"
+    )
+  ) |>
+  st_drop_geometry()
+
+focus_pct <- mean(iso_region$region_focus != "elsewhere")
+```
+
+```{r}
+
+```
+
+
+### Discussion:
+
+## Conclusion
